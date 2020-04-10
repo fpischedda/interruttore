@@ -100,17 +100,17 @@
     :or
     {max-retries 3
      retry-after-ms 10}}]
-  (let [circuit_ (atom {:retry-count 0
-                        :retry-after nil
-                        :retry-after-ms retry-after-ms
-                        :max-retries max-retries
-                        :status :closed})]
+  (let [circuit_ (atom {::retry-count 0
+                        ::retry-after nil
+                        ::retry-after-ms retry-after-ms
+                        ::max-retries max-retries
+                        ::status :closed})]
     (with-meta
       (fn [& args]
         (if (circuit-open? @circuit_)
           ;; circuit still open, fail early
           {:status :open
-           :retry-after (:retry-after @circuit_)}
+           :retry-after (::retry-after @circuit_)}
           ;; circuit not open, try to call wrapped-fn and handle the result
           (loop []
             (let [{:keys [result value] :as res}
@@ -122,9 +122,9 @@
               ;; evaluate result and prev state to calculate next state
               (swap! circuit_ #(circuit-next-state % res))
 
-              (let [{:keys [status retry-count retry-after]} @circuit_]
+              (let [{::keys [status retry-count retry-after]} @circuit_]
                 (cond
-                  (= :open status)
+                  (= ::open status)
                   ;; wrapped-fn failed too many times
                   {:status :open
                    :retry-after retry-after}
@@ -135,10 +135,10 @@
                     (Thread/sleep (* retry-after-ms (inc retry-count)))
                     (recur))
 
-                  ;; wrapped-fn was successful, status can be :closed
-                  ;; or :semi-open
+                  ;; wrapped-fn was successful, status can be ::closed
+                  ;; or ::semi-open
                   :else
-                  {:status status
+                  {:status (if (= ::closed status) :closed :semi-open)
                    :value value}
                   ))))))
       {:circuit_ circuit_})))

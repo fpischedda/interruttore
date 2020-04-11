@@ -25,9 +25,8 @@ This library provides two ways to wrap a function with a circuit breaker:
 (defn to-be-wrapped [a b]
   (/ a b))
 
-(def wrapped (cb/make-circuit-breaker {:wrapped-fn to-be-wrapped
-                                       :max-retries 2
-                                       :retry-after-ms 10}))
+(def wrapped (cb/make-circuit-breaker to-be-wrapped {:max-retries 2
+                                                     :retry-after-ms 10}))
 
 ;; happy case
 (wrapped 2 2) ;; => {:status :closed :value 1}
@@ -50,9 +49,8 @@ This library provides two ways to wrap a function with a circuit breaker:
 (defn to-be-wrapped [result]
   result)
 
-(def wrapped (cb/make-circuit-breaker {:wrapped-fn to-be-wrapped
-                                       :max-retries 2
-                                       :retry-after-ms 10}))
+(def wrapped (cb/make-circuit-breaker to-be-wrapped {:max-retries 2
+                                                     :retry-after-ms 10}))
 
 ;; happy case
 (wrapped {:result :ok :value 1}) ;; => {:status :closed :value 1}

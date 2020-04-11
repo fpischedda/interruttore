@@ -146,12 +146,12 @@
 (defn inspect
   "Return the status of the provided circuit (as an atom)"
   [c]
-  (meta c :circuit_))
+  (:circuit_ (meta c)))
 
 (defn reset
   "Reset the circuit to initial state"
   [c]
-  (swap! (meta c :circuit_) assoc
-    :status :closed
-    :retry-count 0
-    :retry-after nil))
+  (swap! (:circuit_ (meta c)) assoc
+    ::status ::closed
+    ::retry-count 0
+    ::retry-after nil))

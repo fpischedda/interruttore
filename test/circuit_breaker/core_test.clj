@@ -8,6 +8,8 @@
   []
   (LocalDateTime/now ZoneOffset/UTC))
 
+;; testing internal API
+
 (deftest circuit-open?
   (testing "Circuit not open when ::closed :)"
     (is (false? (cb/circuit-open? {::status ::closed}))))
@@ -76,3 +78,48 @@
             {:result :hard-failure
              :retry-after 5}))))
   )
+
+;; testing public API
+(defn wrapped-helper
+  "This helper should make it easy to simulate return values
+  of a wrapped function"
+  ([result value]
+   (wrapped-helper result value nil))
+  ([result value retry-after]
+   {:result result
+    :value value
+    :retry-after retry-after}))
+
+(def wrapped (cb/make-circuit-breaker {:wrapped-fn wrapped-helper}))
+
+(deftest circuit-breaker-api
+  (testing "Circuit closed, result :ok"
+    (is (= {:status :closed
+            :value 1}
+           (wrapped :ok 1))))
+  (testing "Circuit closed, result :soft-failure"
+    (is (= {:status :open
+            :retry-after "after"}
+           (wrapped :soft-failure 1 "after"))))
+  (testing "Circuit open, next call :ok, status :semi-open"
+    (is (= {:status :semi-open
+            :value 1}
+          (do
+            (cb/reset wrapped)
+            (wrapped :soft-failure 1 (now)) ;; open the circuit
+            (wrapped :ok 1)))))
+  (testing "Circuit semi-open, next call :ok, status :closed"
+    (is (= {:status :closed
+            :value 1}
+          (do
+            (cb/reset wrapped)
+            (wrapped :soft-failure 1 (now)) ;; open the circuit
+            (wrapped :ok 1) ;; here the status is :semi-open
+            (wrapped :ok 1)))))
+  (testing "Circuit closed, result :hard-failure"
+    (is (= {:status :open
+            :retry-after "after"}
+          (do
+            (cb/reset wrapped)
+            (wrapped :hard-failure 1 "after")))))
+)

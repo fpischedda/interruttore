@@ -90,7 +90,7 @@
     :value value
     :retry-after retry-after}))
 
-(def wrapped (cb/make-circuit-breaker {:wrapped-fn wrapped-helper}))
+(def wrapped (cb/make-circuit-breaker wrapped-helper))
 
 (deftest circuit-breaker-api
   (testing "Circuit closed, result :ok"

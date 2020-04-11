@@ -96,52 +96,55 @@
 
   in the case `wfn` throws the :soft-failure case will be used
   "
-  [{:keys [wrapped-fn max-retries retry-after-ms]
-    :or
-    {max-retries 3
-     retry-after-ms 10}}]
-  (let [circuit_ (atom {::retry-count 0
-                        ::retry-after nil
-                        ::retry-after-ms retry-after-ms
-                        ::max-retries max-retries
-                        ::status :closed})]
-    (with-meta
-      (fn [& args]
-        (if (circuit-open? @circuit_)
-          ;; circuit still open, fail early
-          {:status :open
-           :retry-after (::retry-after @circuit_)}
-          ;; circuit not open, try to call wrapped-fn and handle the result
-          (loop []
-            (let [{:keys [result value] :as res}
-                  (try
-                    (apply wrapped-fn args)
-                    (catch Throwable t
-                      ;; exception are considered as soft-failure
-                      {:result :soft-failure}))]
-              ;; evaluate result and prev state to calculate next state
-              (swap! circuit_ #(circuit-next-state % res))
+  ([wrapped-fn]
+   (make-circuit-breaker wrapped-fn {}))
+  ([wrapped-fn
+    {:keys [max-retries retry-after-ms]
+     :or
+     {max-retries 3
+      retry-after-ms 10}}]
+   (let [circuit_ (atom {::retry-count 0
+                         ::retry-after nil
+                         ::retry-after-ms retry-after-ms
+                         ::max-retries max-retries
+                         ::status :closed})]
+     (with-meta
+       (fn [& args]
+         (if (circuit-open? @circuit_)
+           ;; circuit still open, fail early
+           {:status :open
+            :retry-after (::retry-after @circuit_)}
+           ;; circuit not open, try to call wrapped-fn and handle the result
+           (loop []
+             (let [{:keys [result value] :as res}
+                   (try
+                     (apply wrapped-fn args)
+                     (catch Throwable t
+                       ;; exception are considered as soft-failure
+                       {:result :soft-failure}))]
+               ;; evaluate result and prev state to calculate next state
+               (swap! circuit_ #(circuit-next-state % res))
 
-              (let [{::keys [status retry-count retry-after]} @circuit_]
-                (cond
-                  (= ::open status)
-                  ;; wrapped-fn failed too many times
-                  {:status :open
-                   :retry-after retry-after}
+               (let [{::keys [status retry-count retry-after]} @circuit_]
+                 (cond
+                   (= ::open status)
+                   ;; wrapped-fn failed too many times
+                   {:status :open
+                    :retry-after retry-after}
 
-                  ;; wrapped-fn did not return ok, sleep a bit and retry
-                  (not (= :ok result))
-                  (do
-                    (Thread/sleep (* retry-after-ms (inc retry-count)))
-                    (recur))
+                   ;; wrapped-fn did not return ok, sleep a bit and retry
+                   (not (= :ok result))
+                   (do
+                     (Thread/sleep (* retry-after-ms (inc retry-count)))
+                     (recur))
 
-                  ;; wrapped-fn was successful, status can be ::closed
-                  ;; or ::semi-open
-                  :else
-                  {:status (if (= ::closed status) :closed :semi-open)
-                   :value value}
-                  ))))))
-      {:circuit_ circuit_})))
+                   ;; wrapped-fn was successful, status can be ::closed
+                   ;; or ::semi-open
+                   :else
+                   {:status (if (= ::closed status) :closed :semi-open)
+                    :value value}
+                   ))))))
+       {:circuit_ circuit_}))))
 
 (defn inspect
   "Return the status of the provided circuit (as an atom)"

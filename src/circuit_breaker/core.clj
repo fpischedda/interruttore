@@ -43,9 +43,7 @@
     :or    {retry-count 0
             max-retries 3}}
    ;; aliasing _result just for documentation
-   {:keys [result retry-after] :as _result}]
-  (println "retry count" retry-count)
-  (println circuit)
+   {:keys [result retry-after reason] :as _result}]
   (case result
     :ok ;; everything is fine this time!
     ;; but maybe it was not :ok before, so be careful
@@ -57,17 +55,21 @@
     ;; in case of soft failure check how many times we have alredy RE-tried
     ;; to decide if the circuit have to be opened or if we can retry again
     :soft-failure
-    (assoc circuit
-      ::status (if (>= retry-count max-retries) ::open ::closed)
-      ::retry-count (inc retry-count)
-      ::retry-after (when (>= retry-count max-retries)
-                     (or retry-after retry-after-ms)))
+    (if (>= retry-count max-retries)
+      (assoc circuit
+        ::status ::open
+        ::reason (or reason :max-retries)
+        ::retry-count (inc retry-count)
+        ::retry-after (or retry-after retry-after-ms))
+      (assoc circuit
+        ::retry-count (inc retry-count)))
 
     ;; hard failure, STOP THE WORLD!!!
     ;; setting retry-count to max-retries to support semi-open case
     :hard-failure
     (assoc circuit
       ::status ::open
+      ::reason (or reason :hard-failure)
       ::retry-count max-retries
       ::retry-after (or retry-after retry-after-ms))))
 
@@ -125,11 +127,12 @@
                ;; evaluate result and prev state to calculate next state
                (swap! circuit_ #(circuit-next-state % res))
 
-               (let [{::keys [status retry-count retry-after]} @circuit_]
+               (let [{::keys [status retry-count retry-after reason]} @circuit_]
                  (cond
                    (= ::open status)
                    ;; wrapped-fn failed too many times
                    {:status :open
+                    :reason reason
                     :retry-after retry-after}
 
                    ;; wrapped-fn did not return ok, sleep a bit and retry

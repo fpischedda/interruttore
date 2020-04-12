@@ -32,11 +32,11 @@
           (#'cb/circuit-next-state {::cb/status ::cb/closed} {:result :ok}))))
   (testing "Circuit ::closed, first :soft-failure, inc ::retry-count to 1"
     (is (= {::cb/status ::cb/closed
-            ::cb/retry-after nil
             ::cb/retry-count 1}
           (#'cb/circuit-next-state {::cb/status ::cb/closed} {:result :soft-failure}))))
   (testing "Circuit ::closed, last :soft-failure, set to ::open"
     (is (= {::cb/status ::cb/open
+            ::cb/reason :max-retries
             ::cb/retry-after 3
             ::cb/max-retries 1
             ::cb/retry-count 2}
@@ -45,6 +45,19 @@
              ::cb/max-retries 1
              ::cb/retry-count 1}
             {:result :soft-failure
+             :retry-after 3}))))
+  (testing "Circuit ::closed, last :soft-failure, provide reason"
+    (is (= {::cb/status ::cb/open
+            ::cb/reason :provided-reason
+            ::cb/retry-after 3
+            ::cb/max-retries 1
+            ::cb/retry-count 2}
+          (#'cb/circuit-next-state
+            {::cb/status ::cb/closed
+             ::cb/max-retries 1
+             ::cb/retry-count 1}
+            {:result :soft-failure
+             :reason :provided-reason
              :retry-after 3}))))
   (testing "Circuit ::open, result :ok, set to ::semi-open"
     (is (= {::cb/status ::cb/semi-open
@@ -68,6 +81,7 @@
             {:result :ok}))))
   (testing "Circuit ::closed, first :hard-failure, set to ::open"
     (is (= {::cb/status ::cb/open
+            ::cb/reason :hard-failure
             ::cb/retry-after 5
             ::cb/max-retries 3
             ::cb/retry-count 3}
@@ -76,6 +90,19 @@
              ::cb/max-retries 3
              ::cb/retry-count 1}
             {:result :hard-failure
+             :retry-after 5}))))
+  (testing "Circuit ::closed, first :hard-failure, provide :reason"
+    (is (= {::cb/status ::cb/open
+            ::cb/reason :provided-reason
+            ::cb/retry-after 5
+            ::cb/max-retries 3
+            ::cb/retry-count 3}
+          (#'cb/circuit-next-state
+            {::cb/status ::cb/closed
+             ::cb/max-retries 3
+             ::cb/retry-count 1}
+            {:result :hard-failure
+             :reason :provided-reason
              :retry-after 5}))))
   )
 
@@ -99,6 +126,7 @@
            (wrapped :ok 1))))
   (testing "Circuit closed, result :soft-failure"
     (is (= {:status :open
+            :reason :max-retries
             :retry-after "after"}
            (wrapped :soft-failure 1 "after"))))
   (testing "Circuit open, next call :ok, status :semi-open"
@@ -118,6 +146,7 @@
             (wrapped :ok 1)))))
   (testing "Circuit closed, result :hard-failure"
     (is (= {:status :open
+            :reason :hard-failure
             :retry-after "after"}
           (do
             (cb/reset wrapped)

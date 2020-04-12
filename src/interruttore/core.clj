@@ -1,4 +1,4 @@
-(ns circuit-breaker.core
+(ns interruttore.core
   (:import
    [java.time Duration LocalDateTime ZoneOffset]))
 

@@ -1,14 +1,14 @@
-# circuit-breaker
+# interruttore
 
 A Clojure library that implements the [circuit breaker design pattern](http://en.wikipedia.org/wiki/Circuit_breaker_design_pattern)
 
 ```clj
-[circuit-breaker "0.0.0"]
+[interruttore "0.0.1"]
 
 ```
 
-> name needs to change, there is already a circuit-breaker library on Clojars,
-> maybe, fpischedda.circuit-breaker or info.pischedda.circuit-breaker?
+Still very very alpha, interfaces, namespaces, functionality may change
+every time; not tested, use at your own risk.
 
 ## Usage
 
@@ -20,7 +20,7 @@ This library provides two ways to wrap a function with a circuit breaker:
 
 ``` clj
 
-(require '[circuit-breaker.core :as cb])
+(require '[interruttore.core :as cb])
 
 (defn to-be-wrapped [a b]
   (/ a b))
@@ -113,10 +113,12 @@ an example:
 ## TODO
 
 - get feedback: is it useful? missing something?
-- better name of the namespace and put everything on clojars
+- better name of the namespace (interrutture may be enough)
+- put everything on clojars
 - eventually apply the return based method to exceptions
 - better documentation
 - def-circuit-breaker macro?
+- support to ClojureScript (should require few changes exp datetime handling)
 
 ## License
 

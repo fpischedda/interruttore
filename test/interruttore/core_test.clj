@@ -1,6 +1,6 @@
-(ns circuit-breaker.core-test
+(ns interruttore.core-test
   (:require [clojure.test :refer :all]
-            [circuit-breaker.core :as cb])
+            [interruttore.core :as cb])
   (:import
    [java.time Duration LocalDateTime ZoneOffset]))
 

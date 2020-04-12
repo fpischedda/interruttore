@@ -32,13 +32,13 @@ This library provides two ways to wrap a function with a circuit breaker:
 (wrapped 2 2) ;; => {:status :closed :value 1}
 
 ;; failing case, retry max-retry times and wait retry-after-ms before retrying
-(wrapped 2 0) ;; => {:status :open :retry-after 10}
+(wrapped 2 0) ;; => {:status :open :retry-after 10 :reason :max-retries}
 
 ;; wrapped start to work again, we are in the semi-open state now
 (wrapped 4 2) ;; => {:status :semi-open :value 2}
 
 ;; fail again, but this time it does not retry
-(wrapped 2 0) ;; => {:status :open :retry-after 10}
+(wrapped 2 0) ;; => {:status :open :retry-after 10 :reason :max-retries}
 
 ```
 
@@ -58,6 +58,7 @@ This library provides two ways to wrap a function with a circuit breaker:
 ;; failing case, retry max-retry times and wait retry-after-ms before retrying
 (wrapped {:result :soft-failure
           :retry-after (in-a-minute)}) ;; => {:status :open
+                                       ;;     :reason :max-retries
                                        ;;     :retry-after :same-date-time}
 
 ;; wrapped start to work again, we are in the semi-open state now
@@ -66,18 +67,19 @@ This library provides two ways to wrap a function with a circuit breaker:
 ;; fail again, but this time it does not retry
 (wrapped {:result :soft-failure
           :retry-after (in-a-minute)}) ;; => {:status :open
+                                       ;;     :reason :max-retries
 		                               ;;     :retry-after :some-date-time}
 
 ```
 
 Return based approach, so far, seems very close to the exception based one,
 if we exclude the possibility, for the wrapped function, to tell exactly until
-when the circuit must stay open; this method provides and additional result
+when the circuit must stay open; this method provides an additional result
 key :hard-failure which will open the circuit without retrying to call the
 wrapped function.
 This can be convenient, for example, in case an external API has a quota,
-it does not make any sense to call the external API again if we have exceed
-our quota.
+it does not make any sense to call the external API again today if we have
+exceed our daily quota.
 
 ``` clj
 
@@ -86,6 +88,24 @@ our quota.
 ;; fail hard this time, so it does not retry
 (wrapped {:result :hard-failure
           :retry-after (tomorrow)}) ;; => {:status :open
+                                    ;;     :reason :hard-failure
+		                            ;;     :retry-after :some-date-time}
+
+```
+
+The map returned by the wrapped can provide another key, `:reason`, that can be
+used to replace the builtin `:reason` returned when the circuit is open, here is
+an example:
+
+``` clj
+
+(cb/reset wrapped)  ;; reset the circuit to its initial state
+
+;; fail hard, this time providing a :reason
+(wrapped {:result :hard-failure
+          :reason :daily-quota-exceeded
+          :retry-after (tomorrow)}) ;; => {:status :open
+                                    ;;     :reason :daily-quota-exceeded
 		                            ;;     :retry-after :some-date-time}
 
 ```

@@ -152,3 +152,22 @@
             (cb/reset wrapped)
             (wrapped :hard-failure 1 "after")))))
 )
+
+;; Custom exception handling
+
+(defn to-be-wrapped [a b] (/ a b))
+
+(def with-ex
+  (cb/make-circuit-breaker
+    (fn [a b] {:result :ok
+               :value (to-be-wrapped a b)})
+    {:exception-types #{ArithmeticException}}))
+
+(deftest exception-handling
+  (testing "Circuit re-throw unhandled exceptions"
+    (is (thrown? NullPointerException (with-ex nil 1))))
+  (testing "Circuit catches the correct exception type"
+    (is (= {:status :open
+            :reason :max-retries
+            :retry-after 10}
+           (with-ex 1 0)))))

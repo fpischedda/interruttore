@@ -36,6 +36,7 @@
           (#'cb/circuit-next-state {::cb/status ::cb/closed} {:result :soft-failure}))))
   (testing "Circuit ::closed, last :soft-failure, set to ::open"
     (is (= {::cb/status ::cb/open
+            ::cb/last-result :soft-failure
             ::cb/reason :max-retries
             ::cb/retry-after 3
             ::cb/max-retries 1
@@ -48,6 +49,7 @@
              :retry-after 3}))))
   (testing "Circuit ::closed, last :soft-failure, provide reason"
     (is (= {::cb/status ::cb/open
+            ::cb/last-result :soft-failure
             ::cb/reason :provided-reason
             ::cb/retry-after 3
             ::cb/max-retries 1
@@ -81,6 +83,7 @@
             {:result :ok}))))
   (testing "Circuit ::closed, first :hard-failure, set to ::open"
     (is (= {::cb/status ::cb/open
+            ::cb/last-result :hard-failure
             ::cb/reason :hard-failure
             ::cb/retry-after 5
             ::cb/max-retries 3
@@ -93,6 +96,7 @@
              :retry-after 5}))))
   (testing "Circuit ::closed, first :hard-failure, provide :reason"
     (is (= {::cb/status ::cb/open
+            ::cb/last-result :hard-failure
             ::cb/reason :provided-reason
             ::cb/retry-after 5
             ::cb/max-retries 3
@@ -117,35 +121,42 @@
     :value value
     :retry-after retry-after}))
 
-(def wrapped (cb/make-circuit-breaker wrapped-helper))
+(def wrapped (cb/make-circuit-breaker wrapped-helper
+               {:max-retries 1}))
 
 (deftest circuit-breaker-api
   (testing "Circuit closed, result :ok"
     (is (= {:status :closed
+            :result :ok
             :value 1}
            (wrapped :ok 1))))
   (testing "Circuit closed, result :soft-failure"
-    (is (= {:status :open
-            :reason :max-retries
-            :retry-after "after"}
+    (is (= {:status :closed
+            :result :soft-failure
+            :value 1}
            (wrapped :soft-failure 1 "after"))))
   (testing "Circuit open, next call :ok, status :semi-open"
     (is (= {:status :semi-open
+            :result :ok
             :value 1}
           (do
             (cb/reset wrapped)
+            (wrapped :soft-failure 1 (now))
             (wrapped :soft-failure 1 (now)) ;; open the circuit
             (wrapped :ok 1)))))
   (testing "Circuit semi-open, next call :ok, status :closed"
     (is (= {:status :closed
+            :result :ok
             :value 1}
           (do
             (cb/reset wrapped)
+            (wrapped :soft-failure 1 (now))
             (wrapped :soft-failure 1 (now)) ;; open the circuit
             (wrapped :ok 1) ;; here the status is :semi-open
             (wrapped :ok 1)))))
   (testing "Circuit closed, result :hard-failure"
     (is (= {:status :open
+            :result :hard-failure
             :reason :hard-failure
             :retry-after "after"}
           (do
@@ -161,13 +172,17 @@
   (cb/make-circuit-breaker
     (fn [a b] {:result :ok
                :value (to-be-wrapped a b)})
-    {:exception-types #{ArithmeticException}}))
+    {:exception-types #{ArithmeticException}
+     :max-retries 1}))
 
 (deftest exception-handling
   (testing "Circuit re-throw unhandled exceptions"
     (is (thrown? NullPointerException (with-ex nil 1))))
   (testing "Circuit catches the correct exception type"
     (is (= {:status :open
+            :result :soft-failure
             :reason :max-retries
             :retry-after 10}
-           (with-ex 1 0)))))
+          (do
+            (with-ex 1 0)
+            (with-ex 1 0))))))

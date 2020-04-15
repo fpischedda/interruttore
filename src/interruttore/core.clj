@@ -52,13 +52,14 @@
       ::retry-after nil
       ::retry-count (if (= ::open status) retry-count 0))
 
-    ;; in case of soft failure check how many times we have alredy RE-tried
-    ;; to decide if the circuit have to be opened or if we can retry again
+    ;; in case of soft failure check how many times we have alredy failed
+    ;; to decide if the circuit have to be opened or if we can try again
     :soft-failure
     (if (>= retry-count max-retries)
       (assoc circuit
         ::status ::open
         ::reason (or reason :max-retries)
+        ::last-result result
         ::retry-count (inc retry-count)
         ::retry-after (or retry-after retry-after-ms))
       (assoc circuit
@@ -69,6 +70,7 @@
     :hard-failure
     (assoc circuit
       ::status ::open
+      ::last-result result
       ::reason (or reason :hard-failure)
       ::retry-count max-retries
       ::retry-after (or retry-after retry-after-ms))))
@@ -110,16 +112,18 @@
                          ::retry-after nil
                          ::retry-after-ms retry-after-ms
                          ::max-retries max-retries
-                         ::status :closed})]
+                         ::last-result nil
+                         ::status ::closed})]
      (with-meta
        (fn [& args]
          (if (circuit-open? @circuit_)
            ;; circuit still open, fail early
-           {:status :open
-            :retry-after (::retry-after @circuit_)}
+           (let [{::keys [last-result retry-after]} @circuit_]
+             {:status :open
+              :result last-result
+              :retry-after retry-after})
            ;; circuit not open, try to call wrapped-fn and handle the result
-           (loop []
-             (let [{:keys [result value] :as res}
+           (let [{:keys [result value] :as res}
                    (try
                      (apply wrapped-fn args)
                      (catch Throwable t
@@ -136,25 +140,18 @@
                (swap! circuit_ #(circuit-next-state % res))
 
                (let [{::keys [status retry-count retry-after reason]} @circuit_]
-                 (cond
-                   (= ::open status)
+                 (if (= ::open status)
                    ;; wrapped-fn failed too many times
                    {:status :open
                     :reason reason
+                    :result result
                     :retry-after retry-after}
 
-                   ;; wrapped-fn did not return ok, sleep a bit and retry
-                   (not (= :ok result))
-                   (do
-                     (Thread/sleep (* retry-after-ms (inc retry-count)))
-                     (recur))
-
-                   ;; wrapped-fn was successful, status can be ::closed
-                   ;; or ::semi-open
-                   :else
+                   ;; circuit still not open, wrapped-fn may have failed
                    {:status (if (= ::closed status) :closed :semi-open)
+                    :result result
                     :value value}
-                   ))))))
+                   )))))
        {:circuit_ circuit_}))))
 
 (defn inspect

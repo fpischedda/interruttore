@@ -101,10 +101,11 @@
   ([wrapped-fn]
    (make-circuit-breaker wrapped-fn {}))
   ([wrapped-fn
-    {:keys [max-retries retry-after-ms]
+    {:keys [max-retries retry-after-ms exception-types]
      :or
      {max-retries 3
-      retry-after-ms 10}}]
+      retry-after-ms 10
+      exception-types #{Throwable}}}]
    (let [circuit_ (atom {::retry-count 0
                          ::retry-after nil
                          ::retry-after-ms retry-after-ms
@@ -122,8 +123,15 @@
                    (try
                      (apply wrapped-fn args)
                      (catch Throwable t
-                       ;; exception are considered as soft-failure
-                       {:result :soft-failure}))]
+                       ;; exceptions are like soft-failures but,
+                       ;; before we can proceed, we need to be sure that type
+                       ;; of the exception is one of those handled by the
+                       ;; circuit breaker
+                       (if (reduce (fn [_ ex-type] (when (instance? ex-type t)
+                                                     true))
+                             nil exception-types)
+                         {:result :soft-failure}
+                         (throw t))))]
                ;; evaluate result and prev state to calculate next state
                (swap! circuit_ #(circuit-next-state % res))
 

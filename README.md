@@ -2,7 +2,8 @@
 
 A Clojure library that implements the [circuit breaker design pattern](http://en.wikipedia.org/wiki/Circuit_breaker_design_pattern)
 
-[![Clojars Project](https://img.shields.io/clojars/v/circuit-breaker.svg)](https://clojars.org/interruttore)
+[![Clojars Project](https://img.shields.io/clojars/v/interruttore.svg)](https://clojars.org/interruttore)
+
 ```clj
 [interruttore "0.1.0"]
 

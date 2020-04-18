@@ -4,10 +4,6 @@
   (:import
    [java.time Duration LocalDateTime ZoneOffset]))
 
-(defn now
-  []
-  (LocalDateTime/now ZoneOffset/UTC))
-
 ;; testing internal API
 
 (deftest circuit-open?
@@ -18,11 +14,11 @@
   (testing "Circuit not open when ::status ::open and ::retry-after is expired"
     (is (false? (cb/circuit-open?
                   {::cb/status ::cb/open
-                   ::cb/retry-after (.minus (now) (Duration/ofMinutes 1))}))))
+                   ::cb/retry-after (cb/calculate-retry-after -1000)}))))
   (testing "Circuit open when ::status ::open and ::retry-after not expired"
     (is (true? (cb/circuit-open?
                  {::cb/status ::cb/open
-                  ::cb/retry-after (.plus (now) (Duration/ofMinutes 1))})))))
+                  ::cb/retry-after (cb/calculate-retry-after 1000)})))))
 
 (deftest circuit-next-state
   (testing "Circuit ::closed, result is :ok, circtuit stays ::closed"
@@ -141,8 +137,8 @@
             :value 1}
           (do
             (cb/reset wrapped)
-            (wrapped :soft-failure 1 (now))
-            (wrapped :soft-failure 1 (now)) ;; open the circuit
+            (wrapped :soft-failure 1 (cb/now))
+            (wrapped :soft-failure 1 (cb/now)) ;; open the circuit
             (wrapped :ok 1)))))
   (testing "Circuit semi-open, next call :ok, status :closed"
     (is (= {:status :closed
@@ -150,18 +146,31 @@
             :value 1}
           (do
             (cb/reset wrapped)
-            (wrapped :soft-failure 1 (now))
-            (wrapped :soft-failure 1 (now)) ;; open the circuit
+            (wrapped :soft-failure 1 (cb/now))
+            (wrapped :soft-failure 1 (cb/now)) ;; open the circuit
             (wrapped :ok 1) ;; here the status is :semi-open
             (wrapped :ok 1)))))
+  (testing "Circuit closed, fail too many times, status :open"
+    (let [retry-after (cb/calculate-retry-after 10)]
+      (is (= {:status :open
+              :reason :max-retries
+              :result :soft-failure
+              :retry-after retry-after}
+            (with-redefs [cb/calculate-retry-after (fn [_] retry-after)]
+              (do
+                (cb/reset wrapped)
+                (wrapped :soft-failure 1)
+                ;; open the circuit
+                (wrapped :soft-failure 1)))))))
   (testing "Circuit closed, result :hard-failure"
-    (is (= {:status :open
-            :result :hard-failure
-            :reason :hard-failure
-            :retry-after "after"}
-          (do
-            (cb/reset wrapped)
-            (wrapped :hard-failure 1 "after")))))
+    (let [retry-after (cb/calculate-retry-after 1000)]
+      (is (= {:status :open
+              :result :hard-failure
+              :reason :hard-failure
+              :retry-after retry-after}
+            (do
+              (cb/reset wrapped)
+              (wrapped :hard-failure 1 retry-after))))))
 )
 
 ;; Custom exception handling
@@ -179,10 +188,12 @@
   (testing "Circuit re-throw unhandled exceptions"
     (is (thrown? NullPointerException (with-ex nil 1))))
   (testing "Circuit catches the correct exception type"
-    (is (= {:status :open
-            :result :soft-failure
-            :reason :max-retries
-            :retry-after 10}
-          (do
-            (with-ex 1 0)
-            (with-ex 1 0))))))
+    (let [retry-after (cb/calculate-retry-after 1000)]
+      (is (= {:status :open
+              :result :soft-failure
+              :reason :max-retries
+              :retry-after retry-after}
+            (with-redefs [cb/calculate-retry-after (fn [_] retry-after)]
+              (do
+                (with-ex 1 0)
+                (with-ex 1 0))))))))

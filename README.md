@@ -5,7 +5,7 @@ A Clojure library that implements the [circuit breaker design pattern](http://en
 [![Clojars Project](https://img.shields.io/clojars/v/interruttore.svg)](https://clojars.org/interruttore)
 
 ```clj
-[interruttore "0.1.0"]
+[interruttore "0.1.1"]
 
 ```
 
@@ -136,8 +136,6 @@ an example:
 - get feedback: is it useful? missing something?
   received some very useful feedback; open for the next round.
 - put everything on clojars
-- eventually apply the return based method to exceptions
-  DEPRECATED, it make the API too complex with no evident benefit
 - better documentation
 - def-circuit-breaker macro?
 - support to ClojureScript (should require few changes exp datetime handling)

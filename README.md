@@ -1,6 +1,9 @@
 # interruttore
 
-A Clojure library that implements the [circuit breaker design pattern](http://en.wikipedia.org/wiki/Circuit_breaker_design_pattern)
+Interruttore is a [circuit-breaker](http://en.wikipedia.org/wiki/Circuit_breaker_design_pattern) implementation for Clojure/ClojureScript.
+Circuit breakers help you write simpler, more robust code in cases where failures might happen (e.g. network or db is down).
+
+If you want to know more about this design pattern have a look at [this awesome blog post](https://www.martinfowler.com/bliki/CircuitBreaker.html) by Martin Fowler.
 
 [![Clojars Project](https://img.shields.io/clojars/v/interruttore.svg)](https://clojars.org/interruttore)
 

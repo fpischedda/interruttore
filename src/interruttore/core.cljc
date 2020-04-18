@@ -1,10 +1,12 @@
 (ns interruttore.core
-  (:import
-   [java.time Duration LocalDateTime ZoneOffset]))
+  #?(:clj
+     (:import
+      [java.time Duration LocalDateTime ZoneOffset])))
 
 (defn now
   []
-  (LocalDateTime/now ZoneOffset/UTC))
+  #?(:clj (LocalDateTime/now ZoneOffset/UTC)
+     :cljs (js/Date.)))
 
 (defn circuit-open?
   "Tells if the circuit is open or not; having retry-after set to nil
@@ -12,6 +14,11 @@
   [{::keys [status retry-after]}]
   (and (= ::open status)
     (or (nil? retry-after) (.isBefore (now) retry-after))))
+
+(defn calculate-retry-after
+  [ms]
+  #?(:clj (.plus (now) (Duration/ofMillis ms))
+     :cljs (js/Date. (+ ms (.getTime (js/Date.))))))
 
 (comment
   (circuit-open? {::status ::closed}) ;; => false
@@ -61,7 +68,7 @@
         ::reason (or reason :max-retries)
         ::last-result result
         ::retry-count (inc retry-count)
-        ::retry-after (or retry-after retry-after-ms))
+        ::retry-after (or retry-after (calculate-retry-after retry-after-ms)))
       (assoc circuit
         ::retry-count (inc retry-count)))
 
@@ -73,7 +80,7 @@
       ::last-result result
       ::reason (or reason :hard-failure)
       ::retry-count max-retries
-      ::retry-after (or retry-after retry-after-ms))))
+      ::retry-after (or retry-after (calculate-retry-after retry-after-ms)))))
 
 (comment
   (circuit-next-state {::status ::closed} {:result :ok})

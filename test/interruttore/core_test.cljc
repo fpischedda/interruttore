@@ -1,5 +1,6 @@
 (ns interruttore.core-test
-  (:require [clojure.test :refer :all]
+  (:require #?(:clj [clojure.test :refer :all]
+               :cljs [cljs.test :refer :all])
             [interruttore.core :as cb])
   (:import
    [java.time Duration LocalDateTime ZoneOffset]))

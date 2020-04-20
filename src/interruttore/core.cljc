@@ -5,15 +5,20 @@
 
 (defn now
   []
-  #?(:clj (LocalDateTime/now ZoneOffset/UTC)
+  #?(:clj  (LocalDateTime/now ZoneOffset/UTC)
      :cljs (js/Date.)))
+
+(defn can-retry-now?
+  [retry-after]
+  #?(:clj  (.isAfter (now) retry-after)
+     :cljs (> (now) retry-after)))
 
 (defn circuit-open?
   "Tells if the circuit is open or not; having retry-after set to nil
    means that the circuit will be open until reset."
   [{::keys [status retry-after]}]
   (and (= ::open status)
-    (or (nil? retry-after) (.isBefore (now) retry-after))))
+    (or (nil? retry-after) (not (can-retry-now? retry-after)))))
 
 (defn calculate-retry-after
   [ms]
@@ -87,7 +92,7 @@
   (circuit-next-state {::status ::closed} {:result :soft-failure})
   )
 
-(defn make-circuit-breaker
+(defn ^:export make-circuit-breaker
   "Return a fn wrapping the provided wrapped-fn with a circuit breaker.
 
   The wrapped function (wfn) is expected to return a map with the
@@ -114,7 +119,7 @@
      :or
      {max-retries 3
       retry-after-ms 10
-      exception-types #{Throwable}}}]
+      exception-types #{#?(:clj Throwable :cljs js/Object)}}}]
    (let [circuit_ (atom {::retry-count 0
                          ::retry-after nil
                          ::retry-after-ms retry-after-ms
@@ -133,16 +138,16 @@
            (let [{:keys [result value] :as res}
                    (try
                      (apply wrapped-fn args)
-                     (catch Throwable t
-                       ;; exceptions are like soft-failures but,
+                     (catch #?(:clj Throwable :cljs js/Object) ex
+                       ;; exceptions are like soft-failures but
                        ;; before we can proceed, we need to be sure that type
                        ;; of the exception is one of those handled by the
                        ;; circuit breaker
-                       (if (reduce (fn [_ ex-type] (when (instance? ex-type t)
+                       (if (reduce (fn [_ ex-type] (when (instance? ex-type ex)
                                                      true))
                              nil exception-types)
                          {:result :soft-failure}
-                         (throw t))))]
+                         (throw ex))))]
                ;; evaluate result and prev state to calculate next state
                (swap! circuit_ #(circuit-next-state % res))
 
@@ -161,12 +166,12 @@
                    )))))
        {:circuit_ circuit_}))))
 
-(defn inspect
+(defn ^:export inspect
   "Return the status of the provided circuit (as an atom)"
   [c]
   (:circuit_ (meta c)))
 
-(defn reset
+(defn ^:export reset
   "Reset the circuit to initial state"
   [c]
   (swap! (:circuit_ (meta c)) assoc

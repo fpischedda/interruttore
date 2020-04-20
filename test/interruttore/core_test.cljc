@@ -1,11 +1,14 @@
 (ns interruttore.core-test
-  (:require #?(:clj [clojure.test :refer :all]
-               :cljs [cljs.test :refer :all])
-            [interruttore.core :as cb])
-  (:import
-   [java.time Duration LocalDateTime ZoneOffset]))
+  (:require #?(:clj  [clojure.test :refer :all]
+               :cljs [cljs.test :refer-macros [deftest testing is]])
+            [interruttore.core :as cb]))
 
 ;; testing internal API
+(deftest can-retry-now?
+  (testing "Can retry now"
+    (is (cb/can-retry-now? (cb/calculate-retry-after -10))))
+  (testing "Cannot retry now"
+    (is (false? (cb/can-retry-now? (cb/calculate-retry-after 10))))))
 
 (deftest circuit-open?
   (testing "Circuit not open when ::closed :)"
@@ -138,8 +141,10 @@
             :value 1}
           (do
             (cb/reset wrapped)
-            (wrapped :soft-failure 1 (cb/now))
-            (wrapped :soft-failure 1 (cb/now)) ;; open the circuit
+            (wrapped :soft-failure 1)
+            ;; open the circuit but wait 0 milliseconds
+            ;; before next retry (just for testing)
+            (wrapped :soft-failure 1 (cb/calculate-retry-after -1))
             (wrapped :ok 1)))))
   (testing "Circuit semi-open, next call :ok, status :closed"
     (is (= {:status :closed
@@ -147,8 +152,10 @@
             :value 1}
           (do
             (cb/reset wrapped)
-            (wrapped :soft-failure 1 (cb/now))
-            (wrapped :soft-failure 1 (cb/now)) ;; open the circuit
+            (wrapped :soft-failure 1)
+            ;; open the circuit but wait 0 milliseconds
+            ;; before next retry (just for testing)
+            (wrapped :soft-failure 1 (cb/calculate-retry-after -1))
             (wrapped :ok 1) ;; here the status is :semi-open
             (wrapped :ok 1)))))
   (testing "Circuit closed, fail too many times, status :open"
@@ -176,25 +183,56 @@
 
 ;; Custom exception handling
 
-(defn to-be-wrapped [a b] (/ a b))
+#?(:clj
+   (do
+     (defn to-be-wrapped [a b] (/ a b))
 
-(def with-ex
-  (cb/make-circuit-breaker
-    (fn [a b] {:result :ok
-               :value (to-be-wrapped a b)})
-    {:exception-types #{ArithmeticException}
-     :max-retries 1}))
+     (def with-ex
+       (cb/make-circuit-breaker
+         (fn [a b] {:result :ok
+                    :value (to-be-wrapped a b)})
+         {:exception-types #{ArithmeticException}
+          :max-retries 1}))
 
-(deftest exception-handling
-  (testing "Circuit re-throw unhandled exceptions"
-    (is (thrown? NullPointerException (with-ex nil 1))))
-  (testing "Circuit catches the correct exception type"
-    (let [retry-after (cb/calculate-retry-after 1000)]
-      (is (= {:status :open
-              :result :soft-failure
-              :reason :max-retries
-              :retry-after retry-after}
-            (with-redefs [cb/calculate-retry-after (fn [_] retry-after)]
-              (do
-                (with-ex 1 0)
-                (with-ex 1 0))))))))
+     (deftest exception-handling
+       (testing "Circuit re-throw unhandled exceptions"
+         (is (thrown? NullPointerException (with-ex nil 1))))
+       (testing "Circuit catches the correct exception type"
+         (let [retry-after (cb/calculate-retry-after 1000)]
+           (is (= {:status :open
+                   :result :soft-failure
+                   :reason :max-retries
+                   :retry-after retry-after}
+                 (with-redefs [cb/calculate-retry-after (fn [_] retry-after)]
+                   (do
+                     (with-ex 1 0)
+                     (with-ex 1 0)))))))))
+   :cljs
+   (do
+     (defn to-be-wrapped [a]
+       (case a
+         :catched (throw (js/RangeError.))
+         :not-catched (throw (js/TypeError.))
+         :else a))
+
+     (def with-ex
+       (cb/make-circuit-breaker
+         (fn [a] {:result :ok
+                  :value (to-be-wrapped a)})
+         {:exception-types #{js/RangeError}
+          :max-retries 1}))
+
+     (deftest exception-handling
+       (testing "Circuit re-throw unhandled exceptions"
+         (is (thrown? js/TypeError (with-ex :not-catched))))
+       (testing "Circuit catches the correct exception type"
+         (let [retry-after (cb/calculate-retry-after 1000)]
+           (is (= {:status :open
+                   :result :soft-failure
+                   :reason :max-retries
+                   :retry-after retry-after}
+                 (with-redefs [cb/calculate-retry-after (fn [_] retry-after)]
+                   (do
+                     (with-ex :catched)
+                     (with-ex :catched)))))))))
+   )

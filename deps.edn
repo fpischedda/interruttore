@@ -12,6 +12,9 @@
          :extra-deps {com.cognitect/test-runner
                        {:git/url "https://github.com/cognitect-labs/test-runner"
                         :sha "209b64504cb3bd3b99ecfec7937b358a879f55c1"}}
-          :main-opts ["-m" "cognitect.test-runner"
-                      "-d" "test"]}}
+         :main-opts ["-m" "cognitect.test-runner"
+                     "-d" "test"]}
+  :test-cljs {:extra-paths ["test"]
+              :extra-deps {olical/cljs-test-runner {:mvn/version "3.7.0"}}
+              :main-opts ["-m" "cljs-test-runner.main"]}}
  }

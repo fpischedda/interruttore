@@ -1,6 +1,7 @@
 # interruttore
 
 Interruttore is a [circuit-breaker](http://en.wikipedia.org/wiki/Circuit_breaker_design_pattern) implementation for Clojure/ClojureScript.
+
 Circuit breakers help you write simpler, more robust code in cases where failures might happen (e.g. network or db is down).
 
 If you want to know more about this design pattern have a look at [this awesome blog post](https://www.martinfowler.com/bliki/CircuitBreaker.html) by Martin Fowler.
@@ -14,6 +15,9 @@ If you want to know more about this design pattern have a look at [this awesome 
 
 Still alpha, interfaces, namespaces, functionality may change
 every time; not tested, use at your own risk.
+
+If you need to use a battle tested circuit breaker implementation (and more),
+please have a look at [diehard](https://github.com/sunng87/diehard).
 
 ## Usage
 

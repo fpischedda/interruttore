@@ -16,5 +16,8 @@
                      "-d" "test"]}
   :test-cljs {:extra-paths ["test"]
               :extra-deps {olical/cljs-test-runner {:mvn/version "3.7.0"}}
-              :main-opts ["-m" "cljs-test-runner.main"]}}
+              :main-opts ["-m" "cljs-test-runner.main"]}
+
+  :deploy {:extra-deps {deps-deploy {:mvn/version "RELEASE"}}
+           :main-opts ["-m" "deps-deploy.deps-deploy" "deploy"]}}
  }

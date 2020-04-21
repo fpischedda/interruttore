@@ -1,4 +1,4 @@
-(defproject interruttore "0.1.0"
+(defproject interruttore "0.1.2"
   :description "A circuit-breaker implementation for Clojure"
   :url "https://github.com/fpischedda/interruttore"
   :license {:name "MIT"

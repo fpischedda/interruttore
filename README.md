@@ -1,16 +1,23 @@
 # interruttore
 
-A Clojure library that implements the [circuit breaker design pattern](http://en.wikipedia.org/wiki/Circuit_breaker_design_pattern)
+Interruttore is a [circuit-breaker](http://en.wikipedia.org/wiki/Circuit_breaker_design_pattern) implementation for Clojure/ClojureScript.
+
+Circuit breakers help you write simpler, more robust code in cases where failures might happen (e.g. network or db is down).
+
+If you want to know more about this design pattern have a look at [this awesome blog post](https://www.martinfowler.com/bliki/CircuitBreaker.html) by Martin Fowler.
 
 [![Clojars Project](https://img.shields.io/clojars/v/interruttore.svg)](https://clojars.org/interruttore)
 
 ```clj
-[interruttore "0.1.0"]
+[interruttore "0.1.2"]
 
 ```
 
 Still alpha, interfaces, namespaces, functionality may change
 every time; not tested, use at your own risk.
+
+If you need to use a battle tested circuit breaker implementation (and more),
+please have a look at [diehard](https://github.com/sunng87/diehard).
 
 ## Usage
 
@@ -136,8 +143,6 @@ an example:
 - get feedback: is it useful? missing something?
   received some very useful feedback; open for the next round.
 - put everything on clojars
-- eventually apply the return based method to exceptions
-  DEPRECATED, it make the API too complex with no evident benefit
 - better documentation
 - def-circuit-breaker macro?
 - support to ClojureScript (should require few changes exp datetime handling)

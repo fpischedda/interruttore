@@ -26,4 +26,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 [Unreleased]: https://github.com/fpischedda/interruttore/compare/0.1.1...HEAD
 
-[0.1.1]: https://github.com/olivierlacan/keep-a-changelog/releases/tag/0.1.1
+[0.1.2]: https://github.com/fpischedda/interruttore/releases/tag/0.1.2

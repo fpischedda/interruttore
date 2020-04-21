@@ -19,5 +19,6 @@
               :main-opts ["-m" "cljs-test-runner.main"]}
 
   :deploy {:extra-deps {deps-deploy {:mvn/version "RELEASE"}}
-           :main-opts ["-m" "deps-deploy.deps-deploy" "deploy"]}}
+           :main-opts ["-m" "deps-deploy.deps-deploy" "deploy"
+                       "interruttore.jar"]}}
  }

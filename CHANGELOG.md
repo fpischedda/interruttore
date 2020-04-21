@@ -6,9 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
-### Changed
-- Add basic support to ClojureScript.
+## [0.1.2]
+### Added
+- Library should work with both Clojure and ClojureScript.
+- Started using deps.end, especially for cljs tests...
+- but still using lein for deployments to clojars.
+### Fixed
+- Use Reader conditionals for platform specific code, should be
+  complete now.
 
 
 ## [0.1.1]

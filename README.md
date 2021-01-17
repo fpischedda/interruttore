@@ -9,7 +9,7 @@ If you want to know more about this design pattern have a look at [this awesome 
 [![Clojars Project](https://img.shields.io/clojars/v/interruttore.svg)](https://clojars.org/interruttore)
 
 ```clj
-[interruttore "0.1.2"]
+[interruttore "0.1.3"]
 
 ```
 

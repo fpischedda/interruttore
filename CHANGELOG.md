@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
+## [0.1.3]
+### Fixed
+- Fix issue #18: bug when dealing with multiple exception types
+
+
 ## [0.1.2]
 ### Added
 - Library should work with both Clojure and ClojureScript.
@@ -27,3 +32,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 [Unreleased]: https://github.com/fpischedda/interruttore/compare/0.1.1...HEAD
 
 [0.1.2]: https://github.com/fpischedda/interruttore/releases/tag/0.1.2
+
+[0.1.3]: https://github.com/fpischedda/interruttore/releases/tag/0.1.3

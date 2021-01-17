@@ -143,9 +143,7 @@
                        ;; before we can proceed, we need to be sure that type
                        ;; of the exception is one of those handled by the
                        ;; circuit breaker
-                       (if (reduce (fn [_ ex-type] (when (instance? ex-type ex)
-                                                     true))
-                             nil exception-types)
+                       (if (some #(instance? % ex) exception-types)
                          {:result :soft-failure}
                          (throw ex))))]
                ;; evaluate result and prev state to calculate next state

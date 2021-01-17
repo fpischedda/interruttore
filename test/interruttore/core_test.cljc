@@ -191,7 +191,7 @@
        (cb/make-circuit-breaker
          (fn [a b] {:result :ok
                     :value (to-be-wrapped a b)})
-         {:exception-types #{ArithmeticException}
+         {:exception-types #{ArithmeticException AssertionError}
           :max-retries 1}))
 
      (deftest exception-handling
